@@ -1,7 +1,7 @@
 open! Core
 open! Import
 
-let days : (module Solution.Day) list = [ (module Day01) ]
+let days : (module Solution.Day) list = [ (module Day01); (module Day02) ]
 
 let command =
   Command.group
@@ -15,7 +15,12 @@ let command =
                     Command.basic
                       ~summary:"Solve the puzzle"
                       (let%map_open.Command file =
-                         flag "-filename" (required Filename.arg_type) ~doc:" "
+                         flag
+                           "-filename"
+                           (optional_with_default
+                              (sprintf "input/day%s.txt" (pad_int Day.day_of_month))
+                              Filename.arg_type)
+                           ~doc:" "
                        in
                        fun () ->
                          Part.Input.load file
@@ -23,7 +28,7 @@ let command =
                          |> Part.Output.to_string
                          |> printf "%s\n")
                   in
-                  Int.to_string Part.one_based_index, command))
+                  pad_int Part.one_based_index, command))
          in
-         Int.to_string Day.day_of_month, command))
+         pad_int Day.day_of_month, command))
 ;;

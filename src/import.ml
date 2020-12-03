@@ -47,4 +47,4 @@ let rec gcd a b =
 ;;
 
 let lcm a b = abs (a * b) / gcd a b
-let option_value_exn x = Option.value_exn x
+let parse_int = Angstrom.lift Int.of_string (Angstrom.take_while1 Char.is_digit)
