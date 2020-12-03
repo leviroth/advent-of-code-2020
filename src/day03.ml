@@ -92,4 +92,21 @@ module Part_01 = struct
   ;;
 end
 
-let parts : (module Solution.Part) list = [ (module Part_01) ]
+module Part_02 = struct
+  include Common
+
+  let solve grid =
+    let counts =
+      List.map [ 1, 1; 1, 3; 1, 5; 1, 7; 2, 1 ] ~f:(fun (drow, dcol) ->
+          Part_01.count grid ~drow ~dcol)
+    in
+    List.reduce_exn counts ~f:( * )
+  ;;
+
+  let%expect_test _ =
+    Input.of_string test_case |> solve |> printf "%d\n";
+    [%expect {| 336 |}]
+  ;;
+end
+
+let parts : (module Solution.Part) list = [ (module Part_01); (module Part_02) ]
