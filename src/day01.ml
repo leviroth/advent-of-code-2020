@@ -26,7 +26,6 @@ end
 module Part_01 = struct
   include Common
 
-  let one_based_index = 1
   let solve numbers = solve_gen numbers ~total:2020 |> Option.value_exn
 
   let%expect_test _ =
@@ -37,8 +36,6 @@ end
 
 module Part_02 = struct
   include Common
-
-  let one_based_index = 2
 
   let solve numbers =
     List.find_map numbers ~f:(fun n ->
@@ -52,5 +49,4 @@ module Part_02 = struct
   ;;
 end
 
-let day_of_month = 1
 let parts : (module Solution.Part) list = [ (module Part_01); (module Part_02) ]
