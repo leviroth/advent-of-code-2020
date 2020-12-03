@@ -1,7 +1,7 @@
 open! Core
 open! Import
 
-let days = [ Day01.parts; Day02.parts ]
+let days = [ Day01.parts; Day02.parts; Day03.parts ]
 
 let command =
   Command.group
