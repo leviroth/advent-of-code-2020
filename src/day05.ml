@@ -21,17 +21,19 @@ module Common = struct
 end
 
 let%expect_test _ =
-  let test_cases = [ "FBFBBFFRLR"; "BFFFBBFRRR"; "FFFBBBFRRR"; "BBFFBBFRLL" ] in
   let open Common in
+  let test_cases = [ "FBFBBFFRLR"; "BFFFBBFRRR"; "FFFBBBFRRR"; "BBFFBBFRLL" ] in
+  let row id = id lsr 3 in
+  let col id = id land ((1 lsl 3) - 1) in
   List.iter test_cases ~f:(fun input ->
       let id = Input.Single.of_string input in
-      print_s [%sexp { input : string; id : int }]);
+      print_s [%sexp { input : string; row : int = row id; col : int = col id; id : int }]);
   [%expect
     {|
-    ((input FBFBBFFRLR) (id 357))
-    ((input BFFFBBFRRR) (id 567))
-    ((input FFFBBBFRRR) (id 119))
-    ((input BBFFBBFRLL) (id 820)) |}]
+    ((input FBFBBFFRLR) (row 44) (col 5) (id 357))
+    ((input BFFFBBFRRR) (row 70) (col 7) (id 567))
+    ((input FFFBBBFRRR) (row 14) (col 7) (id 119))
+    ((input BBFFBBFRLL) (row 102) (col 4) (id 820)) |}]
 ;;
 
 module Part_01 = struct
