@@ -39,4 +39,6 @@ module Make_parseable_many (T : Parser) = struct
 
     let parser = Angstrom.sep_by (Angstrom.take_while1 Char.is_whitespace) T.parser
   end)
+
+  module Single = Make_parseable (T)
 end
