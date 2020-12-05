@@ -33,4 +33,15 @@ module Part_01 = struct
   let solve i = List.max_elt i ~compare |> Option.value_exn
 end
 
-let parts : (module Solution.Part) list = [ (module Part_01) ]
+module Part_02 = struct
+  include Common
+
+  let solve i =
+    let min = List.min_elt i ~compare |> Option.value_exn in
+    let max = List.max_elt i ~compare |> Option.value_exn in
+    let set = Int.Hash_set.of_list i in
+    List.find_exn (List.range min (max + 1)) ~f:(Fn.non (Hash_set.mem set))
+  ;;
+end
+
+let parts : (module Solution.Part) list = [ (module Part_01); (module Part_02) ]
