@@ -5,13 +5,14 @@ module Seat = struct
   type t = int [@@deriving sexp]
 
   let parser =
-    Angstrom.scan_state 0 (fun n c ->
-        Option.map
-          ~f:(( + ) (n lsl 1))
-          (match c with
-          | 'B' | 'R' -> Some 1
-          | 'F' | 'L' -> Some 0
-          | _ -> None))
+    ensure_nonempty
+      (Angstrom.scan_state 0 (fun n c ->
+           Option.map
+             ~f:(( + ) (n lsl 1))
+             (match c with
+             | 'B' | 'R' -> Some 1
+             | 'F' | 'L' -> Some 0
+             | _ -> None)))
   ;;
 end
 

@@ -23,12 +23,7 @@ module Passport = struct
 end
 
 module Common = struct
-  module Input = Input.Make_parseable (struct
-    type t = Passport.t list
-
-    let parser = Angstrom.(many (Passport.parser <* take_while Char.is_whitespace))
-  end)
-
+  module Input = Input.Make_parseable_many (Passport)
   module Output = Int
 end
 

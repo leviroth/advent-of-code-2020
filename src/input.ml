@@ -40,7 +40,7 @@ module Make_parseable_many (T : Parser) = struct
 
     let parser =
       let open Angstrom in
-      sep_by (take_while1 Char.is_whitespace) (ensure_nonempty T.parser)
+      many (T.parser <* take_while Char.is_whitespace)
     ;;
   end)
 
