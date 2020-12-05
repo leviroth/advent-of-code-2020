@@ -1,4 +1,5 @@
 open! Core
+open! Import
 include Input_intf
 
 module Int_list = struct
@@ -37,7 +38,10 @@ module Make_parseable_many (T : Parser) = struct
   include Make_parseable (struct
     type t = T.t list
 
-    let parser = Angstrom.sep_by (Angstrom.take_while1 Char.is_whitespace) T.parser
+    let parser =
+      let open Angstrom in
+      sep_by (take_while1 Char.is_whitespace) (ensure_nonempty T.parser)
+    ;;
   end)
 
   module Single = Make_parseable (T)

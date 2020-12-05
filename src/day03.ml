@@ -25,10 +25,11 @@ module Grid = struct
             | '.' -> Some (index + 1, trees)
             | '#' -> Some (index + 1, index :: trees)
             | _ -> None)
+        <* (end_of_line <|> end_of_input)
+        |> ensure_nonempty
       in
-      let all_rows = sep_by end_of_line one_row in
+      let all_rows = many_till one_row end_of_input in
       map all_rows ~f:(fun rows ->
-          let rows = List.filter rows ~f:(fun (length, _trees) -> length <> 0) in
           let width =
             List.map rows ~f:fst
             |> List.reduce_exn ~f:(fun a b ->

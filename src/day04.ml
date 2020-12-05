@@ -4,25 +4,29 @@ open! Import
 module Passport = struct
   type t = string String.Map.t [@@deriving sexp]
 
-  let parser =
-    let open Angstrom in
-    let field =
-      both (take_while Char.is_alpha <* char ':') (take_while (Fn.non Char.is_whitespace))
-      <?> "field"
-    in
-    sep_by1 (skip Char.is_whitespace) field >>| String.Map.of_alist_exn
+  open Angstrom
+
+  let field_separator =
+    take_while1 Char.is_whitespace
+    >>| String.count ~f:Char.(equal '\n')
+    >>= (function
+          | 0 | 1 -> return ()
+          | _ -> fail "")
+    <?> "field separator"
   ;;
+
+  let field =
+    both (take_while Char.is_alpha <* char ':') (take_till Char.is_whitespace) <?> "field"
+  ;;
+
+  let parser = sep_by1 field_separator field >>| String.Map.of_alist_exn <?> "passport"
 end
 
 module Common = struct
   module Input = Input.Make_parseable (struct
     type t = Passport.t list
 
-    let parser =
-      Angstrom.(
-        sep_by (end_of_line *> end_of_line) Passport.parser
-        <* (end_of_line <|> end_of_input))
-    ;;
+    let parser = Angstrom.(many (Passport.parser <* take_while Char.is_whitespace))
   end)
 
   module Output = Int
