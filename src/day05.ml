@@ -6,21 +6,13 @@ module Common = struct
     type t = int
 
     let parser =
-      let scan_and_shift string ~true_ ~false_ =
-        String.fold string ~init:0 ~f:(fun n c ->
-            (n lsl 1)
-            +
-            match Char.equal c true_ with
-            | true -> 1
-            | false ->
-              (match Char.equal c false_ with
-              | true -> 0
-              | false -> raise_s [%message "Unexpected char" (c : char) (string : string)]))
-      in
       let open Angstrom in
-      map2 (take 7) (take 3) ~f:(fun row col ->
-          (8 * scan_and_shift row ~true_:'B' ~false_:'F')
-          + scan_and_shift col ~true_:'R' ~false_:'L')
+      let as_bit ~true_ ~false_ = char true_ *> return 1 <|> char false_ *> return 0 in
+      let to_int bits = List.fold bits ~init:0 ~f:(fun n bit -> (n lsl 1) + bit) in
+      map2
+        (count 7 (as_bit ~true_:'B' ~false_:'F'))
+        (count 3 (as_bit ~true_:'R' ~false_:'L'))
+        ~f:(fun row col -> (8 * to_int row) + to_int col)
     ;;
   end)
 
