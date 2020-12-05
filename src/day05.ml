@@ -12,6 +12,7 @@ module Seat = struct
           | 'B' | 'R' -> Some 1
           | 'F' | 'L' -> Some 0
           | _ -> None))
+    |> ensure_nonempty
   ;;
 end
 

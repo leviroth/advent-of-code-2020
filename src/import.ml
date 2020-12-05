@@ -49,3 +49,4 @@ let rec gcd a b =
 
 let lcm a b = abs (a * b) / gcd a b
 let parse_int = Angstrom.lift Int.of_string (Angstrom.take_while1 Char.is_digit)
+let ensure_nonempty parser = Angstrom.(peek_char_fail *> parser)
