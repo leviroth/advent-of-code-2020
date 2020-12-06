@@ -56,7 +56,9 @@ let%expect_test _ =
 module Part_01 = struct
   include Common
 
-  let solve = List.sum (module Int) ~f:(fun one -> Set.length (Char.Set.union_list one))
+  let solve =
+    List.sum (module Int) ~f:(fun group -> Set.length (Char.Set.union_list group))
+  ;;
 
   let%expect_test _ =
     let open Common in
@@ -66,4 +68,23 @@ module Part_01 = struct
   ;;
 end
 
-let parts : (module Solution.Part) list = [ (module Part_01) ]
+module Part_02 = struct
+  include Common
+
+  let all_letters = Char.Set.of_list (List.filter Char.all ~f:Char.is_alpha)
+
+  let solve =
+    List.sum
+      (module Int)
+      ~f:(fun group -> Set.length (List.fold group ~init:all_letters ~f:Set.inter))
+  ;;
+
+  let%expect_test _ =
+    let open Common in
+    let input = Input.of_string test_case in
+    print_s [%sexp (solve input : int)];
+    [%expect {| 6 |}]
+  ;;
+end
+
+let parts : (module Solution.Part) list = [ (module Part_01); (module Part_02) ]
