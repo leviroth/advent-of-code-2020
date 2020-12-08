@@ -89,4 +89,30 @@ let%expect_test _ =
   [%expect {| 4 |}]
 ;;
 
-let parts : (module Solution.Part) list = [ (module Part_01) ]
+module Part_02 = struct
+  include Common
+
+  let build_graph = String.Map.of_alist_exn
+
+  let rec count graph ~node ~weight =
+    weight
+    * (1
+      + List.sum
+          (module Int)
+          (Map.find_exn graph node)
+          ~f:(fun (weight, child) -> count graph ~node:child ~weight))
+  ;;
+
+  let solve input =
+    let graph = build_graph input in
+    count graph ~node:"shiny gold" ~weight:1 - 1
+  ;;
+end
+
+let%expect_test _ =
+  let input = Common.Input.of_string test_case in
+  print_s [%sexp (Part_02.solve input : int)];
+  [%expect {| 32 |}]
+;;
+
+let parts : (module Solution.Part) list = [ (module Part_01); (module Part_02) ]
