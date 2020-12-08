@@ -84,9 +84,13 @@ module Part_02 = struct
   let in_range lower upper n = lower <= n && n <= upper
 
   let height =
-    choice
-      [ string "cm" *> return (in_range 150 193); string "in" *> return (in_range 59 76) ]
-    <*> (take_while Char.is_digit >>| Int.of_string)
+    map2
+      (take_while Char.is_digit >>| Int.of_string)
+      (choice
+         [ string "cm" *> return (in_range 150 193)
+         ; string "in" *> return (in_range 59 76)
+         ])
+      ~f:(fun x f -> f x)
     |> true_or_fail
   ;;
 
