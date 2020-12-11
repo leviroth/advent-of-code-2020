@@ -1,0 +1,124 @@
+open! Core
+open! Import
+
+module Cell = struct
+  type t =
+    | Floor
+    | Empty_seat
+    | Occupied_seat
+  [@@deriving sexp, equal]
+
+  let parser =
+    let open Angstrom in
+    any_char
+    >>= function
+    | '.' -> return Floor
+    | 'L' -> return Empty_seat
+    | '#' -> return Occupied_seat
+    | c -> fail (sprintf "Unexpected char '%c'" c)
+  ;;
+end
+
+module Grid = struct
+  type t = Cell.t Int_pair.Map.t [@@deriving sexp]
+
+  let parser =
+    let open Angstrom in
+    let one_row = many1 Cell.parser <* take_while Char.is_whitespace in
+    let all = many one_row in
+    map all ~f:(fun all ->
+        List.mapi all ~f:(fun row_num row ->
+            List.mapi row ~f:(fun col_num cell -> (row_num, col_num), cell))
+        |> List.concat
+        |> Int_pair.Map.of_alist_exn)
+  ;;
+end
+
+module Common = struct
+  module Input = Input.Make_parseable (Grid)
+  module Output = Int
+end
+
+let test_case =
+  {|L.LL.LL.LL
+LLLLLLL.LL
+L.L.L..L..
+LLLL.LL.LL
+L.LL.LL.LL
+L.LLLLL.LL
+..L.L.....
+LLLLLLLLLL
+L.LLLLLL.L
+L.LLLLL.LL|}
+;;
+
+module Part_01 = struct
+  include Common
+
+  let offsets =
+    let range = List.range (-1) 2 in
+    let all = List.cartesian_product range range |> Int_pair.Set.of_list in
+    Set.remove all (0, 0) |> Set.to_list
+  ;;
+
+  let%expect_test _ =
+    print_s [%sexp (offsets : (int * int) list)];
+    [%expect {| ((-1 -1) (-1 0) (-1 1) (0 -1) (0 1) (1 -1) (1 0) (1 1)) |}]
+  ;;
+
+  let surrounding_coords coords = List.map offsets ~f:(Int_pair.add coords)
+
+  let surrounding_cells t ~coords =
+    let surrounding_coords = surrounding_coords coords in
+    List.map surrounding_coords ~f:(Map.find t)
+  ;;
+
+  let new_cell (t : Grid.t) ~coords : Cell.t option =
+    match Map.find_exn t coords with
+    | Floor -> None
+    | Empty_seat ->
+      (match
+         List.exists
+           (surrounding_cells t ~coords)
+           ~f:([%equal: Cell.t option] (Some Occupied_seat))
+       with
+      | true -> None
+      | false -> Some Occupied_seat)
+    | Occupied_seat ->
+      (match
+         List.count
+           (surrounding_cells t ~coords)
+           ~f:([%equal: Cell.t option] (Some Occupied_seat))
+         >= 4
+       with
+      | true -> Some Empty_seat
+      | false -> None)
+  ;;
+
+  let update t =
+    Map.fold
+      t
+      ~init:(Int_pair.Map.empty, false)
+      ~f:(fun ~key:coords ~data:cell (new_t, any_changes) ->
+        match new_cell t ~coords with
+        | None -> Map.set new_t ~key:coords ~data:cell, any_changes
+        | Some new_cell -> Map.set new_t ~key:coords ~data:new_cell, true)
+  ;;
+
+  let solve input =
+    let rec loop grid =
+      match update grid with
+      | grid, false -> grid
+      | grid, true -> loop grid
+    in
+    Map.count (loop input) ~f:(Cell.equal Occupied_seat)
+  ;;
+end
+
+let%expect_test _ =
+  let input = Part_01.Input.of_string test_case in
+  print_s [%sexp (Part_01.solve input : int)];
+  [%expect {| 37 |}]
+;;
+
+let parts : (module Solution.Part) list = [ (module Part_01) ]
