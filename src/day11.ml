@@ -52,26 +52,12 @@ L.LLLLLL.L
 L.LLLLL.LL|}
 ;;
 
-module Part_01 = struct
+module Make (M : sig
+  val tolerance : int
+  val neighbors : Grid.t -> coords:int * int -> Cell.t option list
+end) =
+struct
   include Common
-
-  let offsets =
-    let range = List.range (-1) 2 in
-    let all = List.cartesian_product range range |> Int_pair.Set.of_list in
-    Set.remove all (0, 0) |> Set.to_list
-  ;;
-
-  let%expect_test _ =
-    print_s [%sexp (offsets : (int * int) list)];
-    [%expect {| ((-1 -1) (-1 0) (-1 1) (0 -1) (0 1) (1 -1) (1 0) (1 1)) |}]
-  ;;
-
-  let surrounding_coords coords = List.map offsets ~f:(Int_pair.add coords)
-
-  let surrounding_cells t ~coords =
-    let surrounding_coords = surrounding_coords coords in
-    List.map surrounding_coords ~f:(Map.find t)
-  ;;
 
   let new_cell (t : Grid.t) ~coords : Cell.t option =
     match Map.find_exn t coords with
@@ -79,7 +65,7 @@ module Part_01 = struct
     | Empty_seat ->
       (match
          List.exists
-           (surrounding_cells t ~coords)
+           (M.neighbors t ~coords)
            ~f:([%equal: Cell.t option] (Some Occupied_seat))
        with
       | true -> None
@@ -87,9 +73,9 @@ module Part_01 = struct
     | Occupied_seat ->
       (match
          List.count
-           (surrounding_cells t ~coords)
+           (M.neighbors t ~coords)
            ~f:([%equal: Cell.t option] (Some Occupied_seat))
-         >= 4
+         >= M.tolerance
        with
       | true -> Some Empty_seat
       | false -> None)
@@ -115,10 +101,55 @@ module Part_01 = struct
   ;;
 end
 
+let offsets =
+  let range = List.range (-1) 2 in
+  let all = List.cartesian_product range range |> Int_pair.Set.of_list in
+  Set.remove all (0, 0) |> Set.to_list
+;;
+
+let%expect_test _ =
+  print_s [%sexp (offsets : (int * int) list)];
+  [%expect {| ((-1 -1) (-1 0) (-1 1) (0 -1) (0 1) (1 -1) (1 0) (1 1)) |}]
+;;
+
+module Part_01 = struct
+  include Make (struct
+    let tolerance = 4
+    let surrounding_coords coords = List.map offsets ~f:(Int_pair.add coords)
+
+    let neighbors t ~coords =
+      let surrounding_coords = surrounding_coords coords in
+      List.map surrounding_coords ~f:(Map.find t)
+    ;;
+  end)
+end
+
 let%expect_test _ =
   let input = Part_01.Input.of_string test_case in
   print_s [%sexp (Part_01.solve input : int)];
   [%expect {| 37 |}]
 ;;
 
-let parts : (module Solution.Part) list = [ (module Part_01) ]
+module Part_02 = struct
+  include Make (struct
+    let tolerance = 5
+
+    let neighbors (t : Grid.t) ~coords =
+      List.map offsets ~f:(fun offset ->
+          let rec loop coords =
+            match Map.find t coords with
+            | (None | Some (Empty_seat | Occupied_seat)) as v -> v
+            | Some Floor -> loop (Int_pair.add coords offset)
+          in
+          loop (Int_pair.add coords offset))
+    ;;
+  end)
+end
+
+let%expect_test _ =
+  let input = Part_02.Input.of_string test_case in
+  print_s [%sexp (Part_02.solve input : int)];
+  [%expect {| 26 |}]
+;;
+
+let parts : (module Solution.Part) list = [ (module Part_01); (module Part_02) ]
