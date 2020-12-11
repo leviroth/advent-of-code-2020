@@ -75,23 +75,17 @@ struct
   ;;
 
   let update t =
-    Map.fold
-      t
-      ~init:(Int_pair.Map.empty, false)
-      ~f:(fun ~key:coords ~data:cell (new_t, any_changes) ->
-        let cell, change =
-          match new_cell t ~coords with
-          | None -> cell, false
-          | Some new_cell -> new_cell, true
-        in
-        Map.set new_t ~key:coords ~data:cell, any_changes || change)
+    Map.fold t ~init:Int_pair.Map.empty ~f:(fun ~key:coords ~data:cell new_t ->
+        let cell = Option.value (new_cell t ~coords) ~default:cell in
+        Map.set new_t ~key:coords ~data:cell)
   ;;
 
   let solve input =
     let rec loop grid =
-      match update grid with
-      | grid, false -> grid
-      | grid, true -> loop grid
+      let new_grid = update grid in
+      match [%equal: Cell.t Int_pair.Map.t] grid new_grid with
+      | true -> grid
+      | false -> loop new_grid
     in
     Map.count (loop input) ~f:(Cell.equal Occupied_seat)
   ;;
