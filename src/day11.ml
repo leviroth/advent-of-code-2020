@@ -89,17 +89,15 @@ let%expect_test _ =
   [%expect {| ((-1 -1) (-1 0) (-1 1) (0 -1) (0 1) (1 -1) (1 0) (1 1)) |}]
 ;;
 
-module Part_01 = struct
-  include Make (struct
-    let tolerance = 4
-    let surrounding_coords coords = List.map offsets ~f:(Int_pair.add coords)
+module Part_01 = Make (struct
+  let tolerance = 4
+  let surrounding_coords coords = List.map offsets ~f:(Int_pair.add coords)
 
-    let neighbors t ~coords =
-      let surrounding_coords = surrounding_coords coords in
-      List.filter_map surrounding_coords ~f:(Map.find t)
-    ;;
-  end)
-end
+  let neighbors t ~coords =
+    let surrounding_coords = surrounding_coords coords in
+    List.filter_map surrounding_coords ~f:(Map.find t)
+  ;;
+end)
 
 let test_case =
   {|L.LL.LL.LL
@@ -120,21 +118,19 @@ let%expect_test _ =
   [%expect {| 37 |}]
 ;;
 
-module Part_02 = struct
-  include Make (struct
-    let tolerance = 5
+module Part_02 = Make (struct
+  let tolerance = 5
 
-    let neighbors (t : Grid.t) ~coords =
-      List.filter_map offsets ~f:(fun offset ->
-          let rec loop coords =
-            match Map.find t coords with
-            | (None | Some (Empty_seat | Occupied_seat)) as v -> v
-            | Some Floor -> loop (Int_pair.add coords offset)
-          in
-          loop (Int_pair.add coords offset))
-    ;;
-  end)
-end
+  let neighbors (t : Grid.t) ~coords =
+    List.filter_map offsets ~f:(fun offset ->
+        let rec loop coords =
+          match Map.find t coords with
+          | (None | Some (Empty_seat | Occupied_seat)) as v -> v
+          | Some Floor -> loop (Int_pair.add coords offset)
+        in
+        loop (Int_pair.add coords offset))
+  ;;
+end)
 
 let%expect_test _ =
   let input = Part_02.Input.of_string test_case in
