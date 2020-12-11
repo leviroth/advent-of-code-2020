@@ -54,7 +54,7 @@ L.LLLLL.LL|}
 
 module Make (M : sig
   val tolerance : int
-  val neighbors : Grid.t -> coords:int * int -> Cell.t option list
+  val neighbors : Grid.t -> coords:int * int -> Cell.t list
 end) =
 struct
   include Common
@@ -63,19 +63,12 @@ struct
     match Map.find_exn t coords with
     | Floor -> None
     | Empty_seat ->
-      (match
-         List.exists
-           (M.neighbors t ~coords)
-           ~f:([%equal: Cell.t option] (Some Occupied_seat))
-       with
+      (match List.exists (M.neighbors t ~coords) ~f:(Cell.equal Occupied_seat) with
       | true -> None
       | false -> Some Occupied_seat)
     | Occupied_seat ->
       (match
-         List.count
-           (M.neighbors t ~coords)
-           ~f:([%equal: Cell.t option] (Some Occupied_seat))
-         >= M.tolerance
+         List.count (M.neighbors t ~coords) ~f:(Cell.equal Occupied_seat) >= M.tolerance
        with
       | true -> Some Empty_seat
       | false -> None)
@@ -119,7 +112,7 @@ module Part_01 = struct
 
     let neighbors t ~coords =
       let surrounding_coords = surrounding_coords coords in
-      List.map surrounding_coords ~f:(Map.find t)
+      List.filter_map surrounding_coords ~f:(Map.find t)
     ;;
   end)
 end
@@ -135,7 +128,7 @@ module Part_02 = struct
     let tolerance = 5
 
     let neighbors (t : Grid.t) ~coords =
-      List.map offsets ~f:(fun offset ->
+      List.filter_map offsets ~f:(fun offset ->
           let rec loop coords =
             match Map.find t coords with
             | (None | Some (Empty_seat | Occupied_seat)) as v -> v
