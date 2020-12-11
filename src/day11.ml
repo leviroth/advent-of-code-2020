@@ -79,9 +79,12 @@ struct
       t
       ~init:(Int_pair.Map.empty, false)
       ~f:(fun ~key:coords ~data:cell (new_t, any_changes) ->
-        match new_cell t ~coords with
-        | None -> Map.set new_t ~key:coords ~data:cell, any_changes
-        | Some new_cell -> Map.set new_t ~key:coords ~data:new_cell, true)
+        let cell, change =
+          match new_cell t ~coords with
+          | None -> cell, false
+          | Some new_cell -> new_cell, true
+        in
+        Map.set new_t ~key:coords ~data:cell, any_changes || change)
   ;;
 
   let solve input =
