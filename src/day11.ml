@@ -39,19 +39,6 @@ module Common = struct
   module Output = Int
 end
 
-let test_case =
-  {|L.LL.LL.LL
-LLLLLLL.LL
-L.L.L..L..
-LLLL.LL.LL
-L.LL.LL.LL
-L.LLLLL.LL
-..L.L.....
-LLLLLLLLLL
-L.LLLLLL.L
-L.LLLLL.LL|}
-;;
-
 module Make (M : sig
   val tolerance : int
   val neighbors : Grid.t -> coords:int * int -> Cell.t list
@@ -113,6 +100,19 @@ module Part_01 = struct
     ;;
   end)
 end
+
+let test_case =
+  {|L.LL.LL.LL
+LLLLLLL.LL
+L.L.L..L..
+LLLL.LL.LL
+L.LL.LL.LL
+L.LLLLL.LL
+..L.L.....
+LLLLLLLLLL
+L.LLLLLL.L
+L.LLLLL.LL|}
+;;
 
 let%expect_test _ =
   let input = Part_01.Input.of_string test_case in
