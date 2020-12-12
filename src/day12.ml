@@ -68,44 +68,46 @@ module Instruction = struct
   ;;
 end
 
-module Common = struct
-  module Input = Input.Make_parseable_many (Instruction)
-  module Output = Int
+module type State = sig
+  type t
+
+  val initial : t
+  val position : t -> Int_pair.t
+  val apply : t -> change:Change.t -> t
 end
 
-module Part_01 = struct
-  include Common
-
-  module State = struct
-    type t =
-      { position : Int_pair.t
-      ; direction : Int_pair.t
-      }
-    [@@deriving sexp]
-
-    let apply t ~(change : Change.t) =
-      match change with
-      | Move_absolute vector -> { t with position = Int_pair.add t.position vector }
-      | Move_forward magnitude ->
-        { t with
-          position = Int_pair.add t.position (Int_pair.scale t.direction magnitude)
-        }
-      | Rotate f -> { t with direction = f t.direction }
-    ;;
-  end
+module Make (State : State) = struct
+  module Input = Input.Make_parseable_many (Instruction)
+  module Output = Int
 
   let solve input =
-    let ({ position = x, y; direction = _ } : State.t) =
-      List.fold
-        input
-        ~init:({ position = 0, 0; direction = 1, 0 } : State.t)
-        ~f:(fun state instruction ->
+    let x, y =
+      List.fold input ~init:State.initial ~f:(fun state instruction ->
           let change = Instruction.to_change instruction in
           State.apply state ~change)
+      |> State.position
     in
     Int.abs x + Int.abs y
   ;;
 end
+
+module Part_01 = Make (struct
+  type t =
+    { position : Int_pair.t
+    ; direction : Int_pair.t
+    }
+  [@@deriving fields]
+
+  let initial = { position = 0, 0; direction = 1, 0 }
+
+  let apply t ~(change : Change.t) =
+    match change with
+    | Move_absolute vector -> { t with position = Int_pair.add t.position vector }
+    | Move_forward magnitude ->
+      { t with position = Int_pair.add t.position (Int_pair.scale t.direction magnitude) }
+    | Rotate f -> { t with direction = f t.direction }
+  ;;
+end)
 
 let test_case = {|F10
 N3
@@ -119,39 +121,23 @@ let%expect_test _ =
   [%expect {| 25 |}]
 ;;
 
-module Part_02 = struct
-  include Common
+module Part_02 = Make (struct
+  type t =
+    { position : Int_pair.t
+    ; waypoint : Int_pair.t
+    }
+  [@@deriving fields]
 
-  module State = struct
-    type t =
-      { position : Int_pair.t
-      ; waypoint : Int_pair.t
-      }
-    [@@deriving sexp]
+  let initial = { position = 0, 0; waypoint = 10, 1 }
 
-    let apply t ~(change : Change.t) =
-      match change with
-      | Move_absolute vector -> { t with waypoint = Int_pair.add t.waypoint vector }
-      | Move_forward magnitude ->
-        { t with
-          position = Int_pair.add t.position (Int_pair.scale t.waypoint magnitude)
-        }
-      | Rotate f -> { t with waypoint = f t.waypoint }
-    ;;
-  end
-
-  let solve input =
-    let ({ position = x, y; waypoint = _ } : State.t) =
-      List.fold
-        input
-        ~init:({ position = 0, 0; waypoint = 10, 1 } : State.t)
-        ~f:(fun state instruction ->
-          let change = Instruction.to_change instruction in
-          State.apply state ~change)
-    in
-    Int.abs x + Int.abs y
+  let apply t ~(change : Change.t) =
+    match change with
+    | Move_absolute vector -> { t with waypoint = Int_pair.add t.waypoint vector }
+    | Move_forward magnitude ->
+      { t with position = Int_pair.add t.position (Int_pair.scale t.waypoint magnitude) }
+    | Rotate f -> { t with waypoint = f t.waypoint }
   ;;
-end
+end)
 
 let test_case = {|F10
 N3
