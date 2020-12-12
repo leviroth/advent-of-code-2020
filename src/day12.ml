@@ -139,12 +139,6 @@ module Part_02 = Make (struct
   ;;
 end)
 
-let test_case = {|F10
-N3
-F7
-R90
-F11|}
-
 let%expect_test _ =
   let input = Part_02.Input.of_string test_case in
   print_s [%sexp (Part_02.solve input : int)];
