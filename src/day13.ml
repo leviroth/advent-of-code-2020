@@ -35,8 +35,6 @@ module Part_01 = struct
     in
     bus * time_waited bus
   ;;
-
-  let solver = Angstrom.map Input.parser ~f:solve
 end
 
 let%expect_test _ =
@@ -49,9 +47,7 @@ module Part_02 = struct
   module Input = Input.Make_parseable (Notes)
   module Output = Int
 
-  let f n (i, bus) = bus - i = n % bus
-
-  let solve ({ earliest_timestamp = _; buses } : Notes.t) =
+  let solve ({ buses; earliest_timestamp = _ } : Notes.t) =
     let with_offsets =
       List.filter_mapi buses ~f:(fun i bus -> Option.map bus ~f:(Tuple2.create i))
     in
@@ -59,19 +55,15 @@ module Part_02 = struct
       List.map with_offsets ~f:(fun (i, bus) -> (bus - i) % bus, bus)
       |> List.sort ~compare:(Comparable.reverse [%compare: _ * int])
     in
-    let first, rest =
-      List.hd_exn with_target_remainders, List.tl_exn with_target_remainders
-    in
-    List.fold rest ~init:first ~f:(fun (start, step) (remainder, bus) ->
+    List.reduce_exn with_target_remainders ~f:(fun (start, step) (remainder, bus) ->
         let start =
-          unfold_forever ~init:start ~f:(( + ) step)
-          |> Sequence.find_exn ~f:(fun v -> v % bus = remainder)
+          Sequence.find_exn
+            (unfold_forever ~init:start ~f:(( + ) step))
+            ~f:(fun v -> v % bus = remainder)
         in
         start, bus * step)
     |> fst
   ;;
-
-  let solver = Angstrom.map Input.parser ~f:solve
 end
 
 let%expect_test _ =
