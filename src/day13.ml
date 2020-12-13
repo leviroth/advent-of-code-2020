@@ -28,7 +28,7 @@ module Part_01 = struct
 
   let solve ({ earliest_timestamp; buses } : Notes.t) =
     let buses = List.filter_opt buses in
-    let time_waited bus = (bus * ((earliest_timestamp / bus) + 1)) - earliest_timestamp in
+    let time_waited bus = bus - (earliest_timestamp % bus) in
     let bus =
       Option.value_exn
         (List.min_elt buses ~compare:(Comparable.lift compare ~f:time_waited))
