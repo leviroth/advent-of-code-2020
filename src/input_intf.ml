@@ -7,21 +7,28 @@ module type S = sig
   val load : string -> t
 end
 
-module type Parser = sig
-  type t
+module Parseable = struct
+  module type Basic = sig
+    type t
 
-  val parser : t Angstrom.t
+    val parser : t Angstrom.t
+  end
+
+  module type S = sig
+    include Basic
+    include S with type t := t
+  end
 end
 
 module type Input = sig
   module type S = S
-  module type Parser = Parser
 
-  module Make_parseable (Parser : Parser) : S with type t = Parser.t
+  module Parseable = Parseable
+  module Make_parseable (Parser : Parseable.Basic) : Parseable.S with type t = Parser.t
 
-  module Make_parseable_many (Parser : Parser) : sig
-    include S with type t = Parser.t list
-    module Single : S with type t = Parser.t
+  module Make_parseable_many (Parser : Parseable.Basic) : sig
+    include Parseable.S with type t = Parser.t list
+    module Single : Parseable.S with type t = Parser.t
   end
 
   module Int_list : S with type t = int list

@@ -23,8 +23,8 @@ module String = struct
   let load file = Sexp.load_sexp_conv_exn file String.t_of_sexp
 end
 
-module Make_parseable (T : Parser) = struct
-  type t = T.t
+module Make_parseable (T : Parseable.Basic) = struct
+  include T
 
   let of_string s = Angstrom.parse_string T.parser s ~consume:All |> Result.ok_or_failwith
 
@@ -34,7 +34,7 @@ module Make_parseable (T : Parser) = struct
   ;;
 end
 
-module Make_parseable_many (T : Parser) = struct
+module Make_parseable_many (T : Parseable.Basic) = struct
   include Make_parseable (struct
     type t = T.t list
 
