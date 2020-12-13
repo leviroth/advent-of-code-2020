@@ -73,11 +73,7 @@ module Part_01 = struct
   include Common
 
   let count (grid : Grid.t) ~drow ~dcol =
-    let cells =
-      Sequence.unfold ~init:(0, 0) ~f:(fun v ->
-          let new_ = Int_pair.add v (drow, dcol) in
-          Some (new_, new_))
-    in
+    let cells = unfold_forever ~init:(0, 0) ~f:(Int_pair.add (drow, dcol)) in
     Sequence.take_while cells ~f:(fun (row, _col) -> row < grid.height)
     |> Sequence.count ~f:(fun (row, col) -> Grid.contains grid ~row ~col)
   ;;

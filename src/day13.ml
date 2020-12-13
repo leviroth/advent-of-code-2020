@@ -64,9 +64,7 @@ module Part_02 = struct
     in
     List.fold rest ~init:first ~f:(fun (start, step) (remainder, bus) ->
         let start =
-          Sequence.unfold ~init:start ~f:(fun start ->
-              let v = start + step in
-              Some (v, v))
+          unfold_forever ~init:start ~f:(( + ) step)
           |> Sequence.find_exn ~f:(fun v -> v % bus = remainder)
         in
         start, bus * step)
