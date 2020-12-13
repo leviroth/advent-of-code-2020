@@ -7,19 +7,14 @@ let test_case = {|939
 module Notes = struct
   type t =
     { earliest_timestamp : int
-    ; buses : int list
+    ; buses : int option list
     }
   [@@deriving sexp]
 
   let parser =
     let open Angstrom in
-    let buses =
-      many
-        (parse_int
-        <* take_while (function
-               | ',' | 'x' -> true
-               | _ -> false))
-    in
+    let bus = choice [ parse_int >>| Option.some; char 'x' *> return None ] in
+    let buses = sep_by (char ',') bus in
     map2
       (parse_int <* take_while Char.is_whitespace)
       buses
@@ -32,6 +27,7 @@ module Part_01 = struct
   module Output = Int
 
   let solve ({ earliest_timestamp; buses } : Notes.t) =
+    let buses = List.filter_opt buses in
     let time_waited bus = (bus * ((earliest_timestamp / bus) + 1)) - earliest_timestamp in
     let bus =
       Option.value_exn
