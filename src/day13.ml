@@ -22,9 +22,13 @@ module Notes = struct
   ;;
 end
 
-module Part_01 = struct
+module Common = struct
   module Input = Input.Make_parseable (Notes)
   module Output = Int
+end
+
+module Part_01 = struct
+  include Common
 
   let solve ({ earliest_timestamp; buses } : Notes.t) =
     let buses = List.filter_opt buses in
@@ -44,8 +48,7 @@ let%expect_test _ =
 ;;
 
 module Part_02 = struct
-  module Input = Input.Make_parseable (Notes)
-  module Output = Int
+  include Common
 
   let solve ({ buses; earliest_timestamp = _ } : Notes.t) =
     let with_offsets =
