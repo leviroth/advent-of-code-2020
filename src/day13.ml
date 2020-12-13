@@ -45,4 +45,41 @@ let%expect_test _ =
   [%expect {| 295 |}]
 ;;
 
-let parts : (module Solution.Part) list = [ (module Part_01) ]
+module Part_02 = struct
+  module Input = Input.Make_parseable (Notes)
+  module Output = Int
+
+  let f n (i, bus) = bus - i = n % bus
+
+  let solve ({ earliest_timestamp = _; buses } : Notes.t) =
+    let with_offsets =
+      List.filter_mapi buses ~f:(fun i bus -> Option.map bus ~f:(Tuple2.create i))
+    in
+    let with_target_remainders =
+      List.map with_offsets ~f:(fun (i, bus) -> (bus - i) % bus, bus)
+      |> List.sort ~compare:(Comparable.reverse [%compare: _ * int])
+    in
+    let first, rest =
+      List.hd_exn with_target_remainders, List.tl_exn with_target_remainders
+    in
+    List.fold rest ~init:first ~f:(fun (start, step) (remainder, bus) ->
+        let start =
+          Sequence.unfold ~init:start ~f:(fun start ->
+              let v = start + step in
+              Some (v, v))
+          |> Sequence.find_exn ~f:(fun v -> v % bus = remainder)
+        in
+        start, bus * step)
+    |> fst
+  ;;
+
+  let solver = Angstrom.map Input.parser ~f:solve
+end
+
+let%expect_test _ =
+  let input = Part_02.Input.of_string test_case in
+  print_s [%sexp (Part_02.solve input : int)];
+  [%expect {| 1068781 |}]
+;;
+
+let parts : (module Solution.Part) list = [ (module Part_01); (module Part_02) ]
