@@ -1,12 +1,68 @@
 open! Core
 open! Import
 
-let test_case =
-  {|mask = XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X
-mem[8] = 11
-mem[7] = 101
-mem[8] = 0|}
-;;
+module Set_instruction = struct
+  type t =
+    { address : int
+    ; value : int
+    }
+  [@@deriving sexp]
+end
+
+module type Mask = sig
+  type t [@@deriving sexp_of]
+
+  val of_string : string -> t
+  val apply : t -> Set_instruction.t -> Set_instruction.t list
+end
+
+module Instruction (Mask : Mask) = struct
+  module Mask = Mask
+
+  type t =
+    | Set_mask of Mask.t
+    | Set_memory of Set_instruction.t
+  [@@deriving sexp_of]
+
+  open Angstrom
+
+  let separator = string " = " *> return ()
+
+  let mask =
+    map
+      (string "mask" *> separator *> take_till Char.is_whitespace)
+      ~f:(fun s -> Set_mask (Mask.of_string s))
+  ;;
+
+  let mem =
+    map2
+      (string "mem[" *> parse_int <* char ']' <* separator)
+      parse_int
+      ~f:(fun address value -> Set_memory { address; value })
+  ;;
+
+  let parser = mask <|> mem
+end
+
+module Solve_gen (Mask : Mask) = struct
+  module Instruction = Instruction (Mask)
+  module Input = Input.Make_parseable_many (Instruction)
+  module Output = Int
+
+  let solve (input : Input.t) =
+    let memory = Int.Table.create () in
+    let mask = ref None in
+    List.iter input ~f:(fun instruction ->
+        match instruction with
+        | Set_mask mask' -> mask := Some mask'
+        | Set_memory instruction ->
+          let mask = Option.value_exn !mask in
+          let instructions = Mask.apply mask instruction in
+          List.iter instructions ~f:(fun { address; value } ->
+              Hashtbl.set memory ~key:address ~data:value));
+    List.sum (module Int) (Hashtbl.data memory) ~f:ident
+  ;;
+end
 
 module Part_1_mask = struct
   type t =
@@ -28,69 +84,23 @@ module Part_1_mask = struct
     let or_ = get_positions_from_right string '1' in
     { and_; or_ }
   ;;
-end
 
-module Instruction (Mask : sig
-  type t [@@deriving sexp_of]
-
-  val of_string : string -> t
-end) =
-struct
-  module Mask = Mask
-
-  type t =
-    | Set_mask of Mask.t
-    | Set_memory of
-        { index : int
-        ; value : int
-        }
-  [@@deriving sexp_of]
-
-  open Angstrom
-
-  let separator = string " = " *> return ()
-
-  let mask =
-    map
-      (string "mask" *> separator *> take_till Char.is_whitespace)
-      ~f:(fun s -> Set_mask (Mask.of_string s))
-  ;;
-
-  let mem =
-    map2
-      (string "mem[" *> parse_int <* char ']' <* separator)
-      parse_int
-      ~f:(fun index value -> Set_memory { index; value })
-  ;;
-
-  let parser = mask <|> mem
-end
-
-module Common = struct
-  module Output = Int
-end
-
-module Part_01 = struct
-  include Common
-  module Instruction = Instruction (Part_1_mask)
-  module Input = Input.Make_parseable_many (Instruction)
-  module Mask = Part_1_mask
-
-  let solve (input : Input.t) =
-    let memory = Int.Table.create () in
-    let mask = ref ({ and_ = 0; or_ = 0 } : Mask.t) in
-    List.iter input ~f:(fun instruction ->
-        match instruction with
-        | Set_mask mask' -> mask := mask'
-        | Set_memory { index; value } ->
-          let ({ and_; or_ } : Mask.t) = !mask in
-          let value = value land and_ lor or_ in
-          Hashtbl.set memory ~key:index ~data:value);
-    List.sum (module Int) (Hashtbl.data memory) ~f:ident
+  let apply { and_; or_ } ({ address; value } : Set_instruction.t)
+      : Set_instruction.t list
+    =
+    [ { address; value = value land and_ lor or_ } ]
   ;;
 end
+
+module Part_01 = Solve_gen (Part_1_mask)
 
 let%expect_test _ =
+  let test_case =
+    {|mask = XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X
+mem[8] = 11
+mem[7] = 101
+mem[8] = 0|}
+  in
   let input = Part_01.Input.of_string test_case in
   print_s [%sexp (Part_01.solve input : int)];
   [%expect {| 165 |}]
@@ -115,8 +125,8 @@ module Part_2_mask = struct
            | _ -> assert false)
   ;;
 
-  let apply (t : t) n =
-    List.fold t ~init:[ n ] ~f:(fun ns fs ->
+  let addresses t base_address =
+    List.fold t ~init:[ base_address ] ~f:(fun ns fs ->
         let open List.Let_syntax in
         let%bind f = fs in
         let%bind n = ns in
@@ -125,39 +135,25 @@ module Part_2_mask = struct
 
   let%expect_test _ =
     let t = of_string "000000000000000000000000000000X1001X" in
-    print_s [%sexp (apply t 42 : int list)];
+    print_s [%sexp (addresses t 42 : int list)];
     [%expect {| (59 58 27 26) |}]
   ;;
-end
 
-module Part_02 = struct
-  include Common
-  module Instruction = Instruction (Part_2_mask)
-  module Input = Input.Make_parseable_many (Instruction)
-  module Mask = Part_2_mask
-
-  let solve (input : Input.t) =
-    let memory = Int.Table.create () in
-    let mask = ref [] in
-    List.iter input ~f:(fun instruction ->
-        match instruction with
-        | Set_mask mask' -> mask := mask'
-        | Set_memory { index; value } ->
-          let addresses = Mask.apply !mask index in
-          List.iter addresses ~f:(fun address ->
-              Hashtbl.set memory ~key:address ~data:value));
-    List.sum (module Int) (Hashtbl.data memory) ~f:ident
+  let apply t ({ address; value } : Set_instruction.t) =
+    let addresses = addresses t address in
+    List.map addresses ~f:(fun address -> ({ address; value } : Set_instruction.t))
   ;;
 end
 
-let test_case =
-  {|mask = 000000000000000000000000000000X1001X
+module Part_02 = Solve_gen (Part_2_mask)
+
+let%expect_test _ =
+  let test_case =
+    {|mask = 000000000000000000000000000000X1001X
 mem[42] = 100
 mask = 00000000000000000000000000000000X0XX
 mem[26] = 1|}
-;;
-
-let%expect_test _ =
+  in
   let input = Part_02.Input.of_string test_case in
   print_s [%sexp (Part_02.solve input : int)];
   [%expect {| 208 |}]
