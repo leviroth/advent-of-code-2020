@@ -17,8 +17,6 @@ module type Mask = sig
 end
 
 module Instruction (Mask : Mask) = struct
-  module Mask = Mask
-
   type t =
     | Set_mask of Mask.t
     | Set_memory of Set_instruction.t
