@@ -13,7 +13,10 @@ end
 
 let test_case = "0,3,6"
 
-module Part_01 = struct
+module Solve_gen (P : sig
+  val final : int
+end) =
+struct
   include Common
 
   let solve input =
@@ -37,9 +40,9 @@ module Part_01 = struct
           m - n
         | _ -> assert false
       in
-      match index with
-      | 2020 -> next_number
-      | _ ->
+      match index = P.final with
+      | true -> next_number
+      | false ->
         add_number index next_number;
         loop (index + 1) next_number
     in
@@ -47,10 +50,18 @@ module Part_01 = struct
   ;;
 end
 
+module Part_01 = Solve_gen (struct
+  let final = 2020
+end)
+
+module Part_02 = Solve_gen (struct
+  let final = 30000000
+end)
+
 let%expect_test _ =
   let input = Part_01.Input.of_string test_case in
   print_s [%sexp (Part_01.solve input : int)];
   [%expect {| 436 |}]
 ;;
 
-let parts : (module Solution.Part) list = [ (module Part_01) ]
+let parts : (module Solution.Part) list = [ (module Part_01); (module Part_02) ]
