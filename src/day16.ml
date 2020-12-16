@@ -113,25 +113,27 @@ module Part_02 = struct
         Maybe_bound.interval_contains_exn ~lower ~upper ~compare field)
   ;;
 
-  let solve ({ rules; nearby_tickets; your_ticket } : Input.t) =
-    let valid_tickets =
-      List.filter nearby_tickets ~f:(fun ticket ->
-          List.for_all ticket ~f:(fun field -> List.exists rules ~f:(matches_rule field)))
-    in
+  let valid_tickets ({ rules; nearby_tickets; your_ticket = _ } : Input.t) =
+    List.filter nearby_tickets ~f:(fun ticket ->
+        List.for_all ticket ~f:(fun field -> List.exists rules ~f:(matches_rule field)))
+  ;;
+
+  let positions_by_rule (rules : Rule.t list) valid_tickets =
     let possible_positions_by_rule =
       let length = List.length rules in
       let range = List.range 0 length in
-      Int.Table.of_alist_exn (List.map range ~f:(fun i -> i, Int.Hash_set.of_list range))
+      String.Table.of_alist_exn
+        (List.map rules ~f:(fun { name; _ } -> name, Int.Hash_set.of_list range))
     in
     List.iter valid_tickets ~f:(fun ticket ->
         List.iteri ticket ~f:(fun fieldi field ->
-            List.iteri rules ~f:(fun rulei rule ->
+            List.iter rules ~f:(fun rule ->
                 match matches_rule field rule with
                 | true -> ()
                 | false ->
-                  let set = Hashtbl.find_exn possible_positions_by_rule rulei in
+                  let set = Hashtbl.find_exn possible_positions_by_rule rule.name in
                   Hash_set.remove set fieldi)));
-    let actual_positions_by_rule = Int.Table.create () in
+    let actual_positions_by_rule = String.Table.create () in
     let rec loop () =
       let fully_constrained =
         Hashtbl.filter_map possible_positions_by_rule ~f:(fun set ->
@@ -151,17 +153,44 @@ module Part_02 = struct
         loop ()
     in
     loop ();
-    let departure_rules =
-      List.filter_mapi rules ~f:(fun i ({ name; _ } : Rule.t) ->
-          match String.is_prefix name ~prefix:"departure" with
-          | true -> Some i
-          | false -> None)
+    String.Map.of_hashtbl_exn actual_positions_by_rule
+  ;;
+
+  let solve ({ rules; your_ticket; nearby_tickets = _ } as input : Input.t) =
+    let valid_tickets = valid_tickets input in
+    let positions_by_rule = positions_by_rule rules valid_tickets in
+    let departure_positions =
+      Map.data
+        (Map.filteri positions_by_rule ~f:(fun ~key:name ~data:_ ->
+             String.is_prefix name ~prefix:"departure"))
     in
-    let positions =
-      List.map departure_rules ~f:(Hashtbl.find_exn actual_positions_by_rule)
-    in
-    List.map positions ~f:(List.nth_exn your_ticket) |> List.reduce_exn ~f:( * )
+    List.map departure_positions ~f:(List.nth_exn your_ticket) |> List.reduce_exn ~f:( * )
   ;;
 end
+
+let%expect_test _ =
+  let test_case =
+    {|class: 0-1 or 4-19
+row: 0-5 or 8-19
+seat: 0-13 or 16-19
+
+your ticket:
+11,12,13
+
+nearby tickets:
+3,9,18
+15,1,5
+5,14,9|}
+  in
+  let input = Part_02.Input.of_string test_case in
+  let positions_by_rule = Part_02.positions_by_rule input.rules input.nearby_tickets in
+  let sorted_positions =
+    Map.to_alist positions_by_rule
+    |> List.sort ~compare:[%compare: _ * int]
+    |> List.map ~f:fst
+  in
+  print_s [%sexp (sorted_positions : string list)];
+  [%expect {| (row class seat) |}]
+;;
 
 let parts : (module Solution.Part) list = [ (module Part_01); (module Part_02) ]
