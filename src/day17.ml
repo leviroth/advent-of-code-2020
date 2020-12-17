@@ -1,7 +1,7 @@
 open! Core
 open! Import
 
-module Coord = struct
+module Coord2 = struct
   module T = struct
     type t = int * int * int [@@deriving sexp, compare]
   end
@@ -9,15 +9,16 @@ module Coord = struct
   include T
   include Comparable.Make (T)
 
-  let add (a, b, c) (a', b', c') = a + a', b + b', c + c'
-end
+  let zero = 0, 0, 0
+  let ( + ) (a, b, c) (a', b', c') = a + a', b + b', c + c'
 
-let test_case = {|.#.
-..#
-###|}
-
-module Space = struct
-  type t = Coord.Set.t [@@deriving sexp]
+  let cartesian_product l =
+    let open List.Let_syntax in
+    let%bind x = l
+    and y = l
+    and z = l in
+    [ x, y, z ]
+  ;;
 
   let parser =
     let open Angstrom in
@@ -30,40 +31,39 @@ module Space = struct
         |> List.concat
         |> List.filter ~f:snd
         |> List.map ~f:fst
-        |> Coord.Set.of_list)
+        |> Set.of_list)
   ;;
 end
 
-module Common = struct
-  module Input = Input.Make_parseable (Space)
-  module Output = Int
-end
+let test_case = {|.#.
+..#
+###|}
 
-module Part_01 = struct
-  include Common
+module Solve_gen (Coord : sig
+  type t
+
+  include Comparable.S with type t := t
+  include Container.Summable with type t := t
+
+  val cartesian_product : int list -> t list
+  val parser : Set.t Angstrom.t
+end) =
+struct
+  module Input = Input.Make_parseable (struct
+    include Coord.Set
+
+    let parser = Coord.parser
+  end)
+
+  module Output = Int
 
   let offsets =
     let range = [ -1; 0; 1 ] in
-    let all =
-      let open List.Let_syntax in
-      let%bind x = range
-      and y = range
-      and z = range in
-      [ x, y, z ]
-    in
-    Set.remove (Coord.Set.of_list all) (0, 0, 0) |> Set.to_list
+    Set.remove (Coord.Set.of_list (Coord.cartesian_product range)) Coord.zero
+    |> Set.to_list
   ;;
 
-  let%expect_test _ =
-    print_s [%sexp (offsets : Coord.t list)];
-    [%expect {|
-      ((-1 -1 -1) (-1 -1 0) (-1 -1 1) (-1 0 -1) (-1 0 0) (-1 0 1) (-1 1 -1)
-       (-1 1 0) (-1 1 1) (0 -1 -1) (0 -1 0) (0 -1 1) (0 0 -1) (0 0 1) (0 1 -1)
-       (0 1 0) (0 1 1) (1 -1 -1) (1 -1 0) (1 -1 1) (1 0 -1) (1 0 0) (1 0 1)
-       (1 1 -1) (1 1 0) (1 1 1)) |}]
-  ;;
-
-  let neighbors coord = List.map offsets ~f:(Coord.add coord)
+  let neighbors coord = List.map offsets ~f:(Coord.( + ) coord)
 
   let update live =
     let neighbor_counts =
@@ -94,10 +94,43 @@ module Part_01 = struct
   let solve input = Set.length (Fn.apply_n_times update ~n:6 input)
 end
 
+module Part_01 = Solve_gen (Coord2)
+
 let%expect_test _ =
   let input = Part_01.Input.of_string test_case in
   print_s [%sexp (Part_01.solve input : int)];
   [%expect {| 112 |}]
 ;;
 
-let parts : (module Solution.Part) list = [ (module Part_01) ]
+module Coord3 = struct
+  module T = struct
+    type t = int * int * int * int [@@deriving sexp, compare]
+  end
+
+  include T
+  include Comparable.Make (T)
+
+  let zero = 0, 0, 0, 0
+  let ( + ) (a, b, c, d) (a', b', c', d') = a + a', b + b', c + c', d + d'
+
+  let cartesian_product l =
+    let open List.Let_syntax in
+    let%bind x = l
+    and y = l
+    and z = l
+    and w = l in
+    [ x, y, z, w ]
+  ;;
+
+  let parser = Angstrom.map Coord2.parser ~f:(Set.map ~f:(fun (a, b, c) -> a, b, c, 0))
+end
+
+module Part_02 = Solve_gen (Coord3)
+
+let%expect_test _ =
+  let input = Part_02.Input.of_string test_case in
+  print_s [%sexp (Part_02.solve input : int)];
+  [%expect {| 848 |}]
+;;
+
+let parts : (module Solution.Part) list = [ (module Part_01); (module Part_02) ]
