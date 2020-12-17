@@ -1,7 +1,7 @@
 open! Core
 open! Import
 
-module Coord2 = struct
+module Coord3 = struct
   module T = struct
     type t = int * int * int [@@deriving sexp, compare]
   end
@@ -94,7 +94,7 @@ struct
   let solve input = Set.length (Fn.apply_n_times update ~n:6 input)
 end
 
-module Part_01 = Solve_gen (Coord2)
+module Part_01 = Solve_gen (Coord3)
 
 let%expect_test _ =
   let input = Part_01.Input.of_string test_case in
@@ -102,7 +102,7 @@ let%expect_test _ =
   [%expect {| 112 |}]
 ;;
 
-module Coord3 = struct
+module Coord4 = struct
   module T = struct
     type t = int * int * int * int [@@deriving sexp, compare]
   end
@@ -122,10 +122,10 @@ module Coord3 = struct
     [ x, y, z, w ]
   ;;
 
-  let parser = Angstrom.map Coord2.parser ~f:(Set.map ~f:(fun (a, b, c) -> a, b, c, 0))
+  let parser = Angstrom.map Coord3.parser ~f:(Set.map ~f:(fun (a, b, c) -> a, b, c, 0))
 end
 
-module Part_02 = Solve_gen (Coord3)
+module Part_02 = Solve_gen (Coord4)
 
 let%expect_test _ =
   let input = Part_02.Input.of_string test_case in
